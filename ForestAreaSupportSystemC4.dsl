@@ -40,7 +40,7 @@ workspace "System Wsparcia Terenów Leśnych" {
             touristAuthService  = container "Tourist Auth Service" "Rejestracja i aktywacja kont turystów."  {
                 tags "Auth"
             }
-            employeeAuthService = container "Employee Auth Service" "Rtejestracja i aktywacja kont pracowników."  {
+            employeeAuthService = container "Employee Auth Service" "Rejestracja i aktywacja kont pracowników."  {
                 tags "Auth"
             }
 
@@ -121,12 +121,13 @@ workspace "System Wsparcia Terenów Leśnych" {
         assignmentService   -> eventBus "AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentExpired" "Kafka"
         patrolService       -> eventBus "PatrolCreated, PatrolDone" "Kafka"
         warningService      -> eventBus "WarningCreated, WarningExpired, WarningDeleted" "Kafka"
-        tripService         -> eventBus "TripInvitationSent, TripCancelled" "Kafka"
+        tripService         -> eventBus "ParticipantInvited, TripCancelled" "Kafka"
 
         # Event Bus — consumers
+        eventBus -> tripService          "WarningCreated, WarningDeleted" "Kafka"
         eventBus -> employeeAuthService  "EmployeeCreated" "Kafka"
         eventBus -> employeeService      "EmployeeActivated" "Kafka"
-        eventBus -> notificationService  "TouristRegistered, EmployeeInvitationSent, AssignmentCreated, AssignmentAccepted, AssignmentRejected, PatrolCreated, WarningCreated" "Kafka"
+        eventBus -> notificationService  "TouristRegistered, EmployeeInvitationSent, AssignmentCreated, AssignmentAccepted, AssignmentRejected, PatrolCreated, WarningCreated, TripCancelled, ParticipantInvited" "Kafka"
         eventBus -> warningService       "PatrolDone" "Kafka"
 
         # External integrations
