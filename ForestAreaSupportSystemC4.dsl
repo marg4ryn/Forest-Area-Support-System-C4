@@ -1,7 +1,7 @@
 workspace "System Wsparcia Terenów Leśnych" {
     model {
 
-        # ── Actors ──────────────────────────────────────────────────────────────
+        # ── Actors ────────────────────────────────────────────────────────────
         tourist       = person "Turysta"
         underForester = person "Podleśniczy"
         forester      = person "Leśniczy"
@@ -9,7 +9,7 @@ workspace "System Wsparcia Terenów Leśnych" {
         director      = person "Dyrektor"
         admin         = person "Administrator"
 
-        # ──External systems ─────────────────────────────────────────────────
+        # ──External systems ───────────────────────────────────────────────────
         mapsApi = softwareSystem "Mapy.com API" "Dane geolokalizacyjne"  {
             tags "External"
         }
@@ -17,18 +17,18 @@ workspace "System Wsparcia Terenów Leśnych" {
             tags "External"
         }
 
-        # ── Main system ──────────────────────────────────────────────────────
+        # ── Main system ────────────────────────────────────────────────────────
         forestSystem = softwareSystem "System Wsparcia Terenów Leśnych" {
 
-            # ── Frontends ──────────────────────────────────────────────────────
-            publicWebApp = container "Public Web App" "Aplikacja turystyczna"  {
+            # Frontends
+            publicWebApp = container "Public Web App" "Aplikacja dla turystów"  {
                 tags "Frontend"
             }
-            internalWebApp = container "Internal Web App" "Aplikacja pracownicza" {
+            internalWebApp = container "Internal Web App" "Aplikacja dla pracowników" {
                 tags "Frontend"
             }
 
-            # ── API Gateways ───────────────────────────────────────────────────
+            # API Gateways
             publicApiGateway = container "Public API Gateway" "Routing i weryfikacja JWT turysty"   {
                 tags "API Gateway"
             }
@@ -36,7 +36,7 @@ workspace "System Wsparcia Terenów Leśnych" {
                 tags "API Gateway"
             }
 
-            # ── Auth Services ──────────────────────────────────────────────────
+            # Auth Services
             touristAuthService  = container "Tourist Auth Service" "Rejestracja i aktywacja kont turystów."  {
                 tags "Auth"
             }
@@ -44,14 +44,14 @@ workspace "System Wsparcia Terenów Leśnych" {
                 tags "Auth"
             }
 
-            # ── Domain services ───────────────────────────────────────────────
+            # Domain services
             employeeService = container "Employee Service" "Dane pracowników, hierarchia. " 
             assignmentService = container "Assignment Service" "Przypisania pracowników do obszarów." 
             areaService = container "Area Service" "Hierarchia obszarów leśnych." 
             tripService = container "Trip Service" "Planowanie wycieczek, zarządzanie uczestnikami. Orkiestrator." 
             patrolService = container "Patrol Service" "Planowanie i realizacja patroli. Orkiestrator." 
             warningService = container "Warning Service" "Zarządzanie ostrzeżeniami. Auto-wygasanie." 
-            notificationService = container "Notification Service" "Wysyłanie powiadomień push/SMS/e-mail." 
+            notificationService = container "Notification Service" "Wysyłanie powiadomień." 
 
             mapGateway = container "Map Gateway" "Proxy Mapy.com API"  {
                 tags "Domain Gateway"
@@ -60,79 +60,83 @@ workspace "System Wsparcia Terenów Leśnych" {
                 tags "Domain Gateway"
             }
 
-            # ── Event Bus ──────────────────────────────────────────────────────
+            # Event Bus
             eventBus = container "Event Bus" "Magistrala zdarzeń domenowych" "Kafka" {
                 tags "Messaging"
+            }
+            
+            # Database
+            database = container "Database" "Współdzielona baza danych, w której każdy serwis posiada własne, prywatne tabele; dostęp realizowany bezpośrednio przez wszystkie serwisy" {
+                tags "Database"
             }
         }
 
         # ── C1 Relationships ─────────────────────────────────────────────────────────
-        tourist       -> forestSystem "Organizuje wycieczki, przegląda mapy, otrzymuje ostrzeżenia"
+        tourist       -> forestSystem "Organizuje wycieczki"
         underForester -> forestSystem "Realizuje patrole, zgłasza ostrzeżenia"
         forester      -> forestSystem "Zarządza podleśniczymi i patrolami"
         overForester  -> forestSystem "Zarządza leśniczymi i leśnictwami"
         director      -> forestSystem "Zarządza nadleśniczymi i nadleśnictwami"
-        admin         -> forestSystem "Zarządza systemem i kontami"
-        forestSystem  -> mapsApi      "Dane geolokalizacyjne" "REST/HTTPS"
-        forestSystem  -> weatherApi   "Dane pogodowe" "REST/HTTPS"
+        admin         -> forestSystem "Zarządza systemem i użytkownikami"
+        forestSystem  -> mapsApi      "Dane geolokalizacyjne" "REST"
+        forestSystem  -> weatherApi   "Dane pogodowe" "REST"
 
         # ── C2 Relationships ─────────────────────────────────────────────────────────
-
-        tourist       -> publicWebApp   "Organizuje wycieczki, przegląda mapy, otrzymuje ostrzeżenia"
+        tourist       -> publicWebApp   "Organizuje wycieczki"
         underForester -> internalWebApp "Realizuje patrole, zgłasza ostrzeżenia"
         forester      -> internalWebApp "Zarządza podleśniczymi i patrolami"
         overForester  -> internalWebApp "Zarządza leśniczymi i leśnictwami"
         director      -> internalWebApp "Zarządza nadleśniczymi i nadleśnictwami"
-        admin         -> internalWebApp "Zarządza systemem i kontami"
+        admin         -> internalWebApp "Zarządza systemem i użytkownikami"
 
-        publicWebApp   -> publicApiGateway   "HTTPS"
-        internalWebApp -> internalApiGateway "HTTPS"
+        publicWebApp   -> publicApiGateway   "REST"
+        internalWebApp -> internalApiGateway "REST"
 
         # Public Gateway
-        publicApiGateway -> touristAuthService "Rejestracja, logowanie, aktywacja kont" "REST"
+        publicApiGateway -> touristAuthService "Rejestracja, logowanie" "REST"
         publicApiGateway -> tripService        "Organizowanie wycieczek" "REST"
         publicApiGateway -> warningService     "Przeglądanie ostrzeżeń" "REST"
         publicApiGateway -> mapGateway         "Mapa" "REST"
         publicApiGateway -> weatherGateway     "Pogoda" "REST"
 
         # Internal Gateway
-        internalApiGateway -> employeeAuthService "Logowanie, aktywacja kont" "REST"
+        internalApiGateway -> employeeAuthService "Rejestracja, logowanie" "REST"
         internalApiGateway -> employeeService     "Zarządzanie pracownikami" "REST"
         internalApiGateway -> assignmentService   "Zarządzanie przypisaniami" "REST"
         internalApiGateway -> areaService         "Zarządzanie obszarami" "REST"
         internalApiGateway -> patrolService       "Zarządzanie patrolami" "REST"
         internalApiGateway -> touristAuthService  "Zarządzanie turystami" "REST"
-        internalApiGateway -> warningService      "Zgłaszanie ostrzeżeń" "REST"
+        internalApiGateway -> warningService      "Zgłaszanie i przeglądanie ostrzeżeń" "REST"
         internalApiGateway -> mapGateway          "Mapa" "REST"
         internalApiGateway -> weatherGateway      "Pogoda" "REST"
 
         # Internal Orchestration - Trip Service
         tripService -> mapGateway "Wyznaczanie i walidacja trasy" "REST"
 
-        # Internal Orchestration — Patrol Service
-        patrolService -> mapGateway       "Wyznaczanie trasy" "REST"
-        patrolService -> areaService      "Walidacja granic obszaru" "REST"
-        patrolService -> assignmentService "Weryfikacja przypisań" "REST"
-
         # Event Bus — producers
         touristAuthService  -> eventBus "TouristRegistered" "Kafka"
-        employeeService     -> eventBus "EmployeeCreated, EmployeeDeleted" "Kafka"
-        employeeAuthService -> eventBus "EmployeeInvitationSent, EmployeeActivated, AccountExpired, AccountDeactivated, DirectorRoleTransferred" "Kafka"
-        assignmentService   -> eventBus "AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentExpired" "Kafka"
-        patrolService       -> eventBus "PatrolCreated, PatrolDone" "Kafka"
-        warningService      -> eventBus "WarningCreated, WarningExpired, WarningDeleted" "Kafka"
-        tripService         -> eventBus "ParticipantInvited, TripCancelled" "Kafka"
+        employeeService     -> eventBus "EmployeeProfileCreated" "Kafka"
+        employeeAuthService -> eventBus "EmployeeActivationTokenCreated, EmployeeAccountActivated, EmployeeActivationExpired" "Kafka"
+        areaService         -> eventBus "AreaCreated" "Kafka"        
+        assignmentService   -> eventBus "AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentReminderSent, AssignmentAutoAccepted, 
+        PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
+        patrolService       -> eventBus "PatrolAssignmentValidationRequested, PatrolCreated" "Kafka"
+        warningService      -> eventBus "" "Kafka"
+        tripService         -> eventBus "ParticipantInvited, TripUpdated, TripOrganizerAssigned, TripCancelled, TripReminderDue, TripCompleted" "Kafka"
 
         # Event Bus — consumers
-        eventBus -> tripService          "WarningCreated, WarningDeleted" "Kafka"
-        eventBus -> employeeAuthService  "EmployeeCreated" "Kafka"
-        eventBus -> employeeService      "EmployeeActivated" "Kafka"
-        eventBus -> notificationService  "TouristRegistered, EmployeeInvitationSent, AssignmentCreated, AssignmentAccepted, AssignmentRejected, PatrolCreated, WarningCreated, TripCancelled, ParticipantInvited" "Kafka"
-        eventBus -> warningService       "PatrolDone" "Kafka"
+        eventBus -> employeeAuthService  "EmployeeProfileCreated" "Kafka"
+        eventBus -> employeeService      "EmployeeAccountActivated, EmployeeActivationExpired" "Kafka"
+        eventBus -> patrolService        "AreaCreated, PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
+        eventBus -> assignmentService    "PatrolAssignmentValidationRequested" "Kafka"
+        eventBus -> warningService       "" "Kafka" 
+        eventBus -> tripService          "" "Kafka"
+        eventBus -> notificationService  "TouristRegistered, EmployeeActivationTokenCreated, AssignmentCreated, AssignmentAccepted, AssignmentRejected, 
+        AssignmentReminderSent, AssignmentAutoAccepted, PatrolCreated, ParticipantInvited, TripUpdated, TripOrganizerAssigned, TripCancelled, TripReminderDue, TripCompleted" "Kafka"
 
         # External integrations
-        mapGateway     -> mapsApi    "REST/HTTPS"
-        weatherGateway -> weatherApi "REST/HTTPS"
+        mapGateway     -> mapsApi    "REST"
+        weatherGateway -> weatherApi "REST"
     }
 
     views {
@@ -174,7 +178,7 @@ workspace "System Wsparcia Terenów Leśnych" {
                 color #ffffff
             }
             element "API Gateway" {
-                shape Cylinder
+                shape Pipe
                 background #6a1b9a
                 color #ffffff
             }
@@ -184,8 +188,13 @@ workspace "System Wsparcia Terenów Leśnych" {
                 color #ffffff
             }
             element "Messaging" {
-                shape Cylinder
+                shape Pipe
                 background #ef1c00
+                color #ffffff
+            }
+            element "Database" {
+                shape Cylinder
+                background #546e7a
                 color #ffffff
             }
             element "External" {
