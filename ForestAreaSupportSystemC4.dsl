@@ -113,18 +113,18 @@ workspace "System Wsparcia Terenów Leśnych" {
         # Event Bus — producers
         touristAuthService  -> eventBus "TouristRegistered" "Kafka"
         employeeService     -> eventBus "EmployeeProfileCreated" "Kafka"
-        employeeAuthService -> eventBus "EmployeeActivationTokenCreated, EmployeeAccountActivated, EmployeeActivationExpired" "Kafka"
-        areaService         -> eventBus "AreaCreated" "Kafka"        
+        employeeAuthService -> eventBus "EmployeeActivationTokenCreated, EmployeeAccountActivated, EmployeeActivationExpired, EmployeeAccountDeleted" "Kafka"
+        areaService         -> eventBus "AreaCreated, AreaDeleted" "Kafka"        
         assignmentService   -> eventBus "AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentReminderSent, AssignmentAutoAccepted, PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
         patrolService       -> eventBus "PatrolAssignmentValidationRequested, PatrolCreated, PatrolWarningNotificationRequired" "Kafka"
         warningService      -> eventBus "WarningCreated" "Kafka"
         tripService         -> eventBus "TripWarningNotificationRequired, ParticipantInvited, TripOrganizerAssigned, TripCancelled" "Kafka"
 
         # Event Bus — consumers
-        eventBus -> employeeAuthService  "EmployeeProfileCreated" "Kafka"
+        eventBus -> employeeAuthService  "EmployeeProfileCreated, EmployeeAccountDeleted" "Kafka"
         eventBus -> employeeService      "EmployeeAccountActivated, EmployeeActivationExpired" "Kafka"
-        eventBus -> patrolService        "AreaCreated, WarningCreated, PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
-        eventBus -> assignmentService    "PatrolAssignmentValidationRequested" "Kafka"
+        eventBus -> patrolService        "AreaCreated, AreaDeleted, WarningCreated, PatrolAssignmentValidated, PatrolAssignmentRejected, EmployeeAccountDeleted" "Kafka"
+        eventBus -> assignmentService    "PatrolAssignmentValidationRequested, EmployeeAccountDeleted" "Kafka"
         eventBus -> tripService          "WarningCreated" "Kafka"
         eventBus -> notificationService  "TouristRegistered, EmployeeActivationTokenCreated, AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentReminderSent, AssignmentAutoAccepted, PatrolCreated, PatrolWarningNotificationRequired, TripWarningNotificationRequired, ParticipantInvited, TripOrganizerAssigned, TripCancelled" "Kafka"
 
