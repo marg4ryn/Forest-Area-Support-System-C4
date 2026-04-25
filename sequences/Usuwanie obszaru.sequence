@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor Przełożony
+    participant WebApp as Internal Web App
+    participant Gateway as Internal API Gateway
+    participant AreaService as Area Service
+    participant EventBus as Event Bus
+    participant PatrolService as Patrol Service
+    participant AssignmentService as Assignment Service
+
+    Przełożony->>WebApp: Inicjuje usunięcie obszaru
+    WebApp->>Gateway: DELETE /areas/{id}
+    Gateway->>AreaService: DELETE /areas/{id}
+    AreaService->>AreaService: Status → DELETED
+    AreaService->>EventBus: AreaDeleted
+    AreaService-->>Gateway: 200 OK
+    Gateway-->>WebApp: 200 OK
+    WebApp-->>Przełożony: Obszar usunięty
+
+    EventBus->>PatrolService: AreaDeleted
+    PatrolService->>PatrolService: Patrole APPROVED/PENDING_VALIDATION → CANCELLED
+
+    EventBus->>AssignmentService: AreaDeleted
+    AssignmentService->>AssignmentService: Przypisania ACCEPTED/PENDING → CANCELLED

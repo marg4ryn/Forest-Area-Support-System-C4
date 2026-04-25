@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor Przełożony
+    participant WebApp as Internal Web App
+    participant Gateway as Internal API Gateway
+    participant EmployeeService as Employee Service
+    participant EventBus as Event Bus
+    participant PatrolService as Patrol Service
+    participant AssignmentService as Assignment Service
+    participant EmployeeAuthService as Employee Auth Service
+
+    Przełożony->>WebApp: Inicjuje usunięcie pracownika
+    WebApp->>Gateway: DELETE /employees/{id}
+    Gateway->>EmployeeService: DELETE /employees/{id}
+    EmployeeService->>EmployeeService: Status → DELETED
+    EmployeeService->>EventBus: EmployeeAccountDeleted
+    EmployeeService-->>Gateway: 200 OK
+    Gateway-->>WebApp: 200 OK
+    WebApp-->>Przełożony: Pracownik usunięty
+
+    EventBus->>PatrolService: EmployeeAccountDeleted
+    PatrolService->>PatrolService: Usuwa pracownika z przyszłych patroli
+    PatrolService->>PatrolService: Patrole bez uczestników → CANCELLED
+
+    EventBus->>AssignmentService: EmployeeAccountDeleted
+    AssignmentService->>AssignmentService: Przypisania ACCEPTED/PENDING → CANCELLED
+
+    EventBus->>EmployeeAuthService: EmployeeAccountDeleted
+    EmployeeAuthService->>EmployeeAuthService: Blokuje możliwość logowania

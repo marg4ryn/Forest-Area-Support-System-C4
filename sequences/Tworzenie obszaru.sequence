@@ -1,0 +1,26 @@
+sequenceDiagram
+    actor Pracownik
+    participant WebApp as Internal Web App
+    participant Gateway as Internal API Gateway
+    participant AreaService as Area Service
+    participant MapGateway as Map Gateway
+    participant EventBus as Event Bus
+    participant PatrolService as Patrol Service
+
+    Pracownik->>WebApp: Definiuje geometrię obszaru
+    WebApp->>Gateway: GET /map/data
+    Gateway->>MapGateway: GET /map/data
+    MapGateway-->>Gateway: Dane geolokalizacyjne
+    Gateway-->>WebApp: Dane geolokalizacyjne
+
+    Pracownik->>WebApp: Zatwierdza obszar
+    WebApp->>Gateway: POST /areas
+    Gateway->>AreaService: POST /areas
+    AreaService->>AreaService: Walidacja granic obszaru
+    AreaService->>AreaService: Zapisuje obszar
+    AreaService->>EventBus: AreaCreated
+    EventBus->>PatrolService: AreaCreated
+    PatrolService->>PatrolService: Zapisuje obszar w lokalnym modelu
+    AreaService-->>Gateway: 201 Created
+    Gateway-->>WebApp: 201 Created
+    WebApp-->>Pracownik: Obszar utworzony

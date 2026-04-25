@@ -1,0 +1,67 @@
+sequenceDiagram
+    actor Przełożony
+    actor Pracownik
+    participant WebApp as InternalWebApp
+    participant Gateway as InternalAPIGateway
+    participant EmployeeService as EmployeeService
+    participant AreaService as AreaService
+    participant AssignmentService as AssignmentService
+    participant EventBus as EventBus
+    participant NotificationService as NotificationService
+
+    Przełożony->>WebApp: Wybiera pracownika i obszar
+    WebApp->>Gateway: GET /employees
+    Gateway->>EmployeeService: GET /employees
+    EmployeeService-->>Gateway: Lista pracowników
+    Gateway-->>WebApp: Lista pracowników
+
+    WebApp->>Gateway: GET /areas
+    Gateway->>AreaService: GET /areas
+    AreaService-->>Gateway: Lista obszarów
+    Gateway-->>WebApp: Lista obszarów
+
+    Przełożony->>WebApp: Tworzy przypisanie
+    WebApp->>Gateway: POST /assignments
+    Gateway->>AssignmentService: POST /assignments
+    AssignmentService->>AssignmentService: Tworzy rekord PENDING
+    AssignmentService->>EventBus: AssignmentCreated
+    AssignmentService-->>Gateway: 201 Created
+    Gateway-->>WebApp: 201 Created
+    WebApp-->>Przełożony: Przypisanie utworzone
+
+    EventBus->>NotificationService: AssignmentCreated
+    NotificationService->>Pracownik: Powiadomienie z możliwością akceptacji/odrzucenia
+
+    alt Pracownik akceptuje
+        Pracownik->>WebApp: Akceptuje przypisanie
+        WebApp->>Gateway: PATCH /assignments/{id}/accept
+        Gateway->>AssignmentService: PATCH /assignments/{id}/accept
+        AssignmentService->>AssignmentService: Status → ACCEPTED
+        AssignmentService->>EventBus: AssignmentAccepted
+        AssignmentService-->>Gateway: 200 OK
+        EventBus->>NotificationService: AssignmentAccepted
+        NotificationService->>Przełożony: Powiadomienie o akceptacji
+
+    else Pracownik odrzuca
+        Pracownik->>WebApp: Odrzuca przypisanie
+        WebApp->>Gateway: PATCH /assignments/{id}/reject
+        Gateway->>AssignmentService: PATCH /assignments/{id}/reject
+        AssignmentService->>AssignmentService: Status → REJECTED
+        AssignmentService->>EventBus: AssignmentRejected
+        AssignmentService-->>Gateway: 200 OK
+        EventBus->>NotificationService: AssignmentRejected
+        NotificationService->>Przełożony: Powiadomienie o odrzuceniu
+
+    else Brak decyzji po 24h
+        AssignmentService->>AssignmentService: Scheduler sprawdza PENDING
+        AssignmentService->>EventBus: AssignmentReminderSent
+        EventBus->>NotificationService: AssignmentReminderSent
+        NotificationService->>Pracownik: Przypomnienie o przypisaniu
+
+    else Brak decyzji po 48h
+        AssignmentService->>AssignmentService: Scheduler — Status → ACCEPTED
+        AssignmentService->>EventBus: AssignmentAutoAccepted
+        EventBus->>NotificationService: AssignmentAutoAccepted
+        NotificationService->>Pracownik: Powiadomienie o automatycznej akceptacji
+        NotificationService->>Przełożony: Powiadomienie o automatycznej akceptacji
+    end
