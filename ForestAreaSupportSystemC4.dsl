@@ -110,29 +110,23 @@ workspace "System Wsparcia Terenów Leśnych" {
         internalApiGateway -> mapGateway          "Mapa" "REST"
         internalApiGateway -> weatherGateway      "Pogoda" "REST"
 
-        # Internal Orchestration - Trip Service
-        tripService -> mapGateway "Wyznaczanie i walidacja trasy" "REST"
-
         # Event Bus — producers
         touristAuthService  -> eventBus "TouristRegistered" "Kafka"
         employeeService     -> eventBus "EmployeeProfileCreated" "Kafka"
         employeeAuthService -> eventBus "EmployeeActivationTokenCreated, EmployeeAccountActivated, EmployeeActivationExpired" "Kafka"
         areaService         -> eventBus "AreaCreated" "Kafka"        
-        assignmentService   -> eventBus "AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentReminderSent, AssignmentAutoAccepted, 
-        PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
-        patrolService       -> eventBus "PatrolAssignmentValidationRequested, PatrolCreated" "Kafka"
-        warningService      -> eventBus "" "Kafka"
-        tripService         -> eventBus "ParticipantInvited, TripUpdated, TripOrganizerAssigned, TripCancelled, TripReminderDue, TripCompleted" "Kafka"
+        assignmentService   -> eventBus "AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentReminderSent, AssignmentAutoAccepted, PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
+        patrolService       -> eventBus "PatrolAssignmentValidationRequested, PatrolCreated, PatrolWarningNotificationRequired" "Kafka"
+        warningService      -> eventBus "WarningCreated" "Kafka"
+        tripService         -> eventBus "TripWarningNotificationRequired, ParticipantInvited, TripOrganizerAssigned, TripCancelled" "Kafka"
 
         # Event Bus — consumers
         eventBus -> employeeAuthService  "EmployeeProfileCreated" "Kafka"
         eventBus -> employeeService      "EmployeeAccountActivated, EmployeeActivationExpired" "Kafka"
-        eventBus -> patrolService        "AreaCreated, PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
+        eventBus -> patrolService        "AreaCreated, WarningCreated, PatrolAssignmentValidated, PatrolAssignmentRejected" "Kafka"
         eventBus -> assignmentService    "PatrolAssignmentValidationRequested" "Kafka"
-        eventBus -> warningService       "" "Kafka" 
-        eventBus -> tripService          "" "Kafka"
-        eventBus -> notificationService  "TouristRegistered, EmployeeActivationTokenCreated, AssignmentCreated, AssignmentAccepted, AssignmentRejected, 
-        AssignmentReminderSent, AssignmentAutoAccepted, PatrolCreated, ParticipantInvited, TripUpdated, TripOrganizerAssigned, TripCancelled, TripReminderDue, TripCompleted" "Kafka"
+        eventBus -> tripService          "WarningCreated" "Kafka"
+        eventBus -> notificationService  "TouristRegistered, EmployeeActivationTokenCreated, AssignmentCreated, AssignmentAccepted, AssignmentRejected, AssignmentReminderSent, AssignmentAutoAccepted, PatrolCreated, PatrolWarningNotificationRequired, TripWarningNotificationRequired, ParticipantInvited, TripOrganizerAssigned, TripCancelled" "Kafka"
 
         # External integrations
         mapGateway     -> mapsApi    "REST"
