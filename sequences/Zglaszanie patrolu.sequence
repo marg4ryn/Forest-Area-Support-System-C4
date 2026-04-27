@@ -1,0 +1,41 @@
+sequenceDiagram
+    actor Pracownik
+    participant WebApp as Aplikacja Webowa
+    participant Gateway as Internal API Gateway
+    participant WarningService as Warning Service
+    participant EventBus as Event Bus
+    participant PatrolService as Patrol Service
+    participant TripService as Trip Service
+    participant NotificationService as Notification Service
+
+    Pracownik->>WebApp: Zgłasza ostrzeżenie
+    WebApp->>Gateway: POST /warnings
+    Gateway->>WarningService: POST /warnings
+    WarningService->>WarningService: Tworzy rekord incydentu (ACTIVE)
+    WarningService->>EventBus: WarningCreated
+    WarningService-->>Gateway: 201 Created
+    Gateway-->>WebApp: 201 Created
+    WebApp-->>Pracownik: Ostrzeżenie zgłoszone
+
+    EventBus->>PatrolService: WarningCreated
+    PatrolService->>PatrolService: Szuka patroli ONGOING w obszarze
+    PatrolService->>EventBus: PatrolWarningNotificationRequired
+    
+    EventBus->>TripService: WarningCreated
+    TripService->>TripService: Szuka wycieczek w obszarze
+    TripService->>EventBus: TripWarningNotificationRequired
+
+    EventBus->>NotificationService: PatrolWarningNotificationRequired
+    NotificationService-->>Pracownik: Powiadomienie dla pracowników
+
+    EventBus->>NotificationService: TripWarningNotificationRequired
+    NotificationService-->>Pracownik: Powiadomienie dla turystów
+
+  sequenceDiagram
+    participant WarningService as Warning Service
+
+    loop Okresowo w tle
+        WarningService->>WarningService: Pobiera rekordy ACTIVE
+        WarningService->>WarningService: Sprawdza czy data ważności minęła
+        WarningService->>WarningService: Status -> EXPIRED (dla przedawnionych)
+    end

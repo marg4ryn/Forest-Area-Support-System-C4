@@ -1,0 +1,41 @@
+sequenceDiagram
+    actor Lesniczy
+    participant WebApp as Aplikacja Webowa
+    participant Gateway as Internal API Gateway
+    participant PatrolService as Patrol Service
+    participant EventBus as Event Bus
+    participant AssignmentService as Assignment Service
+    participant NotificationService as Notification Service
+
+    Lesniczy->>WebApp: Wyznacza uczestników i okienko czasowe
+    WebApp->>Gateway: POST /patrols
+    Gateway->>PatrolService: POST /patrols
+    PatrolService->>PatrolService: Zapisuje patrol (PENDING_VALIDATION)
+    PatrolService->>PatrolService: Lokalna walidacja trasy (AreaCreated)
+
+    alt Trasa poza obszarem
+        PatrolService->>PatrolService: Status -> REJECTED
+        PatrolService-->>Gateway: 400 Bad Request
+        Gateway-->>WebApp: Błąd walidacji
+    else Trasa poprawna
+        PatrolService->>EventBus: PatrolAssignmentValidationRequested
+        EventBus->>AssignmentService: PatrolAssignmentValidationRequested
+        AssignmentService->>AssignmentService: Sprawdza aktywne przypisania
+
+        alt Brak przypisań
+            AssignmentService->>EventBus: PatrolAssignmentRejected
+            EventBus->>PatrolService: PatrolAssignmentRejected
+            PatrolService->>PatrolService: Status -> REJECTED
+        else Przypisania poprawne
+            AssignmentService->>EventBus: PatrolAssignmentValidated
+            EventBus->>PatrolService: PatrolAssignmentValidated
+            PatrolService->>PatrolService: Status -> APPROVED
+            PatrolService->>PatrolService: Zapisuje finalną trasę
+            PatrolService->>EventBus: PatrolCreated
+            EventBus->>NotificationService: PatrolCreated
+            NotificationService-->>Lesniczy: Powiadomienie (uczestnicy)
+        end
+        PatrolService-->>Gateway: 201 Created
+        Gateway-->>WebApp: 201 Created
+        WebApp-->>Lesniczy: Patrol utworzony
+    end

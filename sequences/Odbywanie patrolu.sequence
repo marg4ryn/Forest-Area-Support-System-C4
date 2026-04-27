@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor Pracownik
+    participant WebApp as Aplikacja Webowa
+    participant Gateway as Internal API Gateway
+    participant PatrolService as Patrol Service
+
+    Pracownik->>WebApp: Wyświetla listę swoich patroli
+    WebApp->>Gateway: GET /patrols
+    Gateway->>PatrolService: GET /patrols
+    PatrolService-->>Gateway: Patrole z aktywnym oknem czasowym
+    Gateway-->>WebApp: Patrole
+    WebApp-->>Pracownik: Lista dostępnych patroli
+
+    Pracownik->>WebApp: Rozpoczyna patrol
+    WebApp->>Gateway: POST /patrols/{id}/start
+    Gateway->>PatrolService: POST /patrols/{id}/start
+    PatrolService->>PatrolService: Status -> ONGOING
+    PatrolService-->>Gateway: 200 OK
+    Gateway-->>WebApp: 200 OK
+    WebApp-->>Pracownik: Patrol rozpoczęty
+
+    Pracownik->>WebApp: Zamyka patrol
+    WebApp->>Gateway: POST /patrols/{id}/end
+    Gateway->>PatrolService: POST /patrols/{id}/end
+    PatrolService->>PatrolService: Status -> COMPLETED
+    PatrolService-->>Gateway: 200 OK
+    Gateway-->>WebApp: 200 OK
+    WebApp-->>Pracownik: Patrol zakończony
