@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor Organizer as Organizator
+    actor Tourist as Turysta
+    participant InternalWebApp
+    participant InternalAPIGateway
+    participant PublicWebApp
+    participant PublicAPIGateway
+    participant TripService
+    participant EventBus
+    participant NotificationService
+
+    Organizer->>InternalWebApp: Wpisuje email uczestnika
+    InternalWebApp->>InternalAPIGateway: InviteParticipant
+    InternalAPIGateway->>TripService: InviteParticipant
+    TripService->>EventBus: ParticipantInvited
+    EventBus->>NotificationService: ParticipantInvited
+    NotificationService-->>Tourist: Wysłanie zaproszenia
+    TripService-->>InternalAPIGateway: ParticipantInvitationRegistered
+    InternalAPIGateway-->>InternalWebApp: ParticipantInvitationRegistered
+
+    alt Akceptacja
+        Tourist->>PublicWebApp: Akceptuje zaproszenie
+        PublicWebApp->>PublicAPIGateway: AcceptInvitation
+        PublicAPIGateway->>TripService: AcceptInvitation
+        TripService-->>PublicAPIGateway: InvitationAccepted
+        PublicAPIGateway-->>PublicWebApp: InvitationAccepted
+    else Odrzucenie
+        Tourist->>PublicWebApp: Odrzuca zaproszenie
+        PublicWebApp->>PublicAPIGateway: RejectInvitation
+        PublicAPIGateway->>TripService: RejectInvitation
+        TripService-->>PublicAPIGateway: InvitationRejected
+        PublicAPIGateway-->>PublicWebApp: InvitationRejected
+    else Brak odpowiedzi
+        Note over Tourist,TripService: Status pozostaje bez zmian
+    end

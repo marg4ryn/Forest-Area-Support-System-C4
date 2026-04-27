@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    actor Organizer as Organizator
+    actor Participant as Uczestnik
+    participant InternalWebApp
+    participant InternalAPIGateway
+    participant TripService
+    participant EventBus
+    participant NotificationService
+
+    Organizer->>InternalWebApp: Anuluje wycieczkę
+    InternalWebApp->>InternalAPIGateway: CancelTrip
+    InternalAPIGateway->>TripService: CancelTrip
+    TripService->>EventBus: TripCancelled
+    EventBus->>NotificationService: TripCancelled
+    NotificationService-->>Organizer: Potwierdzenie anulowania
+    NotificationService-->>Participant: Powiadomienie o anulowaniu wycieczki
+    TripService-->>InternalAPIGateway: TripCancelled
+    InternalAPIGateway-->>InternalWebApp: TripCancelled

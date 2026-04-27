@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    actor Organizer as Organizator
+    actor NewOrganizer as Nowy organizator
+    participant InternalWebApp
+    participant InternalAPIGateway
+    participant TripService
+    participant EventBus
+    participant NotificationService
+
+    Organizer->>InternalWebApp: Zmienia organizatora
+    InternalWebApp->>InternalAPIGateway: ChangeTripOrganizer
+    InternalAPIGateway->>TripService: AssignNewOrganizer
+    TripService->>EventBus: TripOrganizerAssigned
+    EventBus->>NotificationService: TripOrganizerAssigned
+    NotificationService-->>NewOrganizer: Powiadomienie o nadaniu roli organizatora
+    TripService-->>InternalAPIGateway: OrganizerChanged
+    InternalAPIGateway-->>InternalWebApp: OrganizerChanged

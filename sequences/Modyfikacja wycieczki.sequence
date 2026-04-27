@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    actor Organizer as Organizator
+    participant InternalWebApp
+    participant InternalAPIGateway
+    participant MapGateway
+    participant TripService
+
+    loop Modyfikacje trasy w trybie DRAFT lub ACTIVE
+        Organizer->>InternalWebApp: Modyfikuje trasę
+
+        InternalWebApp->>InternalAPIGateway: UpdateTripRouteOrMetadata
+
+        alt Zmiana geometrii trasy (dodanie/usunięcie/przesunięcie punktu)
+            InternalAPIGateway->>MapGateway: ResolveLocationPoint
+            MapGateway-->>InternalAPIGateway: LocationPointResolved
+
+            InternalAPIGateway->>TripService: PatchTripRoute
+            TripService-->>InternalAPIGateway: TripRouteUpdated
+
+        else Zmiana wartości niegeometrycznych (np. nazwa, termin)
+            InternalAPIGateway->>TripService: PatchTripMetadata
+            TripService-->>InternalAPIGateway: TripUpdated
+        end
+
+        InternalAPIGateway-->>InternalWebApp: UpdateConfirmed
+    end

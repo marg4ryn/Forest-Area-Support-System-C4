@@ -1,0 +1,14 @@
+sequenceDiagram
+    autonumber
+    participant Scheduler
+    participant TripService
+
+    Note over Scheduler,TripService: Nadejście terminu rozpoczęcia
+
+    Scheduler->>TripService: StartTripScheduleTriggered
+    TripService-->>Scheduler: TripStatusChangedToOngoing
+
+    Note over Scheduler,TripService: Upływ terminu zakończenia
+
+    Scheduler->>TripService: CompleteTripScheduleTriggered
+    TripService-->>Scheduler: TripStatusChangedToCompleted

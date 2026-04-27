@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor Organizer as Organizator
+    participant InternalWebApp
+    participant InternalAPIGateway
+    participant MapGateway
+    participant TripService
+
+    Organizer->>InternalWebApp: Dodaje pierwszy punkt trasy
+    InternalWebApp->>InternalAPIGateway: CreateDraftTrip
+    InternalAPIGateway->>MapGateway: ResolveLocationPoint
+    MapGateway-->>InternalAPIGateway: LocationPointResolved
+    InternalAPIGateway->>TripService: CreateTrip(status=DRAFT)
+    TripService-->>InternalAPIGateway: TripCreated
+    InternalAPIGateway-->>InternalWebApp: TripCreated
+
+    loop Kolejne zmiany trasy
+        Organizer->>InternalWebApp: Dodaje / usuwa / przesuwa punkt
+        InternalWebApp->>InternalAPIGateway: UpdateTripRoute
+        InternalAPIGateway->>MapGateway: ResolveLocationPoint
+        MapGateway-->>InternalAPIGateway: LocationPointResolved
+        InternalAPIGateway->>TripService: PatchTripRoute
+        TripService-->>InternalAPIGateway: TripRouteUpdated
+        InternalAPIGateway-->>InternalWebApp: TripRouteUpdated
+    end
+
+    Organizer->>InternalWebApp: Publikuje wycieczkę
+    InternalWebApp->>InternalAPIGateway: PublishTrip
+    InternalAPIGateway->>TripService: ActivateTrip
+    TripService-->>InternalAPIGateway: TripActivated
+    InternalAPIGateway-->>InternalWebApp: TripActivated

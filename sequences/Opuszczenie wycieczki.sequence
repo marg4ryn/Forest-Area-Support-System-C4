@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    actor Participant as Uczestnik
+    actor Organiser as Organizator
+    participant InternalWebApp
+    participant InternalAPIGateway
+    participant TripService
+    participant EventBus
+    participant NotificationService
+
+    Participant->>InternalWebApp: Opuszcza wycieczkę
+    InternalWebApp->>InternalAPIGateway: LeaveTrip
+    InternalAPIGateway->>TripService: LeaveTrip
+
+    alt Użytkownik nie jest organizatorem
+        TripService->>EventBus: TripParticipantLeft
+        EventBus->>NotificationService: TripParticipantLeft
+        NotificationService-->>Participant: Potwierdzenie opuszczenia
+        NotificationService-->>Organiser: Powiadomienie o opuszczeniu przez uczestnika
+        TripService-->>InternalAPIGateway: ParticipantRemoved
+        InternalAPIGateway-->>InternalWebApp: ParticipantRemoved
+    else Użytkownik jest organizatorem
+        TripService-->>InternalAPIGateway: LeaveTripRejectedOrganizerRole
+        InternalAPIGateway-->>InternalWebApp: LeaveTripRejectedOrganizerRole
+    end
