@@ -1,0 +1,51 @@
+
+sequenceDiagram
+    actor Przełożony
+    actor Pracownik
+    participant WebApp as Internal Web App
+    participant Gateway as Internal API Gateway
+    participant EmployeeService as Employee Service
+    participant EmployeeAuth as Employee Auth Service
+    participant EventBus as Event Bus
+    participant NotificationService as Notification Service
+
+    Przełożony->>WebApp: Tworzy profil pracownika
+    WebApp->>Gateway: POST /employees
+    Gateway->>EmployeeService: POST /employees
+    EmployeeService->>EmployeeService: Zapisuje dane pracownika
+    EmployeeService->>EventBus: EmployeeProfileCreated
+    EmployeeService-->>Gateway: 201 Created
+    Gateway-->>WebApp: 201 Created
+    WebApp-->>Przełożony: Profil utworzony
+
+    EventBus->>EmployeeAuth: EmployeeProfileCreated
+    EmployeeAuth->>EmployeeAuth: Tworzy konto PENDING
+    EmployeeAuth->>EmployeeAuth: Generuje token aktywacyjny (24h)
+    EmployeeAuth->>EventBus: EmployeeActivationTokenCreated
+
+    EventBus->>NotificationService: EmployeeActivationTokenCreated
+    NotificationService->>NotificationService: Zapisuje dane kontaktowe
+    NotificationService->>Pracownik: Link aktywacyjny (zaproszenie)
+
+    Pracownik->>WebApp: Klika link aktywacyjny
+    WebApp->>Gateway: POST /auth/activate?token=xyz
+    Gateway->>EmployeeAuth: POST /auth/activate?token=xyz
+    EmployeeAuth->>EmployeeAuth: Weryfikuje token
+
+    alt Token poprawny
+        Pracownik->>WebApp: Ustawia hasło
+        WebApp->>Gateway: POST /auth/set-password
+        Gateway->>EmployeeAuth: POST /auth/set-password
+        EmployeeAuth->>EmployeeAuth: Konto → ACTIVE
+        EmployeeAuth->>EventBus: EmployeeAccountActivated
+        EmployeeAuth-->>Gateway: 200 OK
+        Gateway-->>WebApp: 200 OK
+        WebApp-->>Pracownik: Konto aktywowane
+
+        EventBus->>EmployeeService: EmployeeAccountActivated
+        EmployeeService->>EmployeeService: Synchronizuje status pracownika → ACTIVE
+    else Token niepoprawny
+        EmployeeAuth-->>Gateway: 400 Bad Request
+        Gateway-->>WebApp: 400 Bad Request
+        WebApp-->>Pracownik: Link nieprawidłowy lub wygasły
+    end

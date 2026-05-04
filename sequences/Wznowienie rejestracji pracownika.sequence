@@ -1,0 +1,23 @@
+
+sequenceDiagram
+    actor Przełożony
+    participant EmployeeAuth as Employee Auth Service
+    participant EventBus as Event Bus
+    participant EmployeeService as Employee Service
+    participant NotificationService as Notification Service
+
+    Note over EmployeeAuth: Scheduler uruchamia się periodycznie
+    EmployeeAuth->>EmployeeAuth: Sprawdza tokeny z przekroczonym TTL
+    EmployeeAuth->>EmployeeAuth: Konto → EXPIRED
+    EmployeeAuth->>EventBus: EmployeeActivationExpired
+
+    EventBus->>EmployeeService: EmployeeActivationExpired
+    EmployeeService->>EmployeeService: Synchronizuje status pracownika → EXPIRED
+
+    Note over Przełożony: Przełożony wznawia proces
+    Przełożony->>EmployeeAuth: POST /auth/resend-invitation/{employeeId}
+    EmployeeAuth->>EmployeeAuth: Generuje nowy token (unieważnia poprzedni)
+    EmployeeAuth->>EventBus: EmployeeActivationTokenCreated
+
+    EventBus->>NotificationService: EmployeeActivationTokenCreated
+    NotificationService->>Przełożony: Nowy link aktywacyjny

@@ -1,0 +1,38 @@
+
+sequenceDiagram
+    actor Turysta
+    participant WebApp as Public Web App
+    participant Gateway as Public API Gateway
+    participant TouristAuth as Tourist Auth Service
+    participant EventBus as Event Bus
+    participant NotificationService as Notification Service
+
+    Turysta->>WebApp: Wypełnia formularz rejestracji
+    WebApp->>Gateway: POST /auth/register
+    Gateway->>TouristAuth: POST /auth/register
+    TouristAuth->>TouristAuth: Tworzy konto PENDING
+    TouristAuth->>TouristAuth: Generuje token aktywacyjny
+    TouristAuth->>EventBus: TouristRegistered
+    TouristAuth-->>Gateway: 201 Created
+    Gateway-->>WebApp: 201 Created
+    WebApp-->>Turysta: Sprawdź skrzynkę mailową
+
+    EventBus->>NotificationService: TouristRegistered
+    NotificationService->>NotificationService: Zapisuje dane kontaktowe
+    NotificationService->>Turysta: Link aktywacyjny
+
+    Turysta->>WebApp: Klika link aktywacyjny
+    WebApp->>Gateway: POST /auth/activate?token=xyz
+    Gateway->>TouristAuth: POST /auth/activate?token=xyz
+    TouristAuth->>TouristAuth: Weryfikuje token (istnienie, jednorazowość, użycie)
+
+    alt Token poprawny
+        TouristAuth->>TouristAuth: Konto → ACTIVE, token → użyty
+        TouristAuth-->>Gateway: 200 OK
+        Gateway-->>WebApp: 200 OK
+        WebApp-->>Turysta: Konto aktywowane
+    else Token niepoprawny
+        TouristAuth-->>Gateway: 400 Bad Request
+        Gateway-->>WebApp: 400 Bad Request
+        WebApp-->>Turysta: Link nieprawidłowy lub już użyty
+    end
