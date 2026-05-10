@@ -1,38 +1,60 @@
-
 sequenceDiagram
     actor Turysta
-    participant WebApp as Public Web App
-    participant Gateway as Public API Gateway
-    participant TouristAuth as Tourist Auth Service
-    participant EventBus as Event Bus
-    participant NotificationService as Notification Service
+    participant WebApp as PublicWebApp
+    participant Gateway as PublicAPIGateway
+    participant TouristAuth as TouristAuthService
+    participant EventBus as EventBus
+    participant NotificationService as NotificationService
+    participant DB as AuthDatabase
 
     Turysta->>WebApp: Wypełnia formularz rejestracji
     WebApp->>Gateway: POST /auth/register
     Gateway->>TouristAuth: POST /auth/register
-    TouristAuth->>TouristAuth: Tworzy konto PENDING
-    TouristAuth->>TouristAuth: Generuje token aktywacyjny
-    TouristAuth->>EventBus: TouristRegistered
-    TouristAuth-->>Gateway: 201 Created
-    Gateway-->>WebApp: 201 Created
-    WebApp-->>Turysta: Sprawdź skrzynkę mailową
+
+    TouristAuth->>DB: Sprawdza czy email istnieje
+    alt Email wolny
+        TouristAuth->>DB: Tworzy konto ze statusem PENDING
+        TouristAuth->>TouristAuth: Generuje jednorazowy token aktywacyjny
+        TouristAuth->>DB: Zapisuje token w activation_tokens
+        TouristAuth->>EventBus: Publikuje TouristRegistered(touristId, email, activationToken)\nna topic tourist.registered
+        TouristAuth-->>Gateway: 201 Created
+        Gateway-->>WebApp: 201 Created
+        WebApp-->>Turysta: Sprawdź skrzynkę mailową
+    else Email zajęty
+        TouristAuth-->>Gateway: 409 Conflict
+        Gateway-->>WebApp: 409 Conflict
+        WebApp-->>Turysta: Email jest już zajęty
+    end
 
     EventBus->>NotificationService: TouristRegistered
-    NotificationService->>NotificationService: Zapisuje dane kontaktowe
-    NotificationService->>Turysta: Link aktywacyjny
+    NotificationService->>NotificationService: Zapisuje dane kontaktowe\n(touristId, name, email)
+    NotificationService->>Turysta: Email z linkiem aktywacyjnym
 
     Turysta->>WebApp: Klika link aktywacyjny
     WebApp->>Gateway: POST /auth/activate?token=xyz
     Gateway->>TouristAuth: POST /auth/activate?token=xyz
-    TouristAuth->>TouristAuth: Weryfikuje token (istnienie, jednorazowość, użycie)
 
-    alt Token poprawny
-        TouristAuth->>TouristAuth: Konto → ACTIVE, token → użyty
+    TouristAuth->>DB: Weryfikuje token\n(istnienie + flaga used)
+
+    alt Token poprawny i nieużyty
+        TouristAuth->>DB: Transakcja atomowa:\n- konto -> ACTIVE\n- token.used -> true
         TouristAuth-->>Gateway: 200 OK
         Gateway-->>WebApp: 200 OK
         WebApp-->>Turysta: Konto aktywowane
-    else Token niepoprawny
+    else Token niepoprawny lub użyty
         TouristAuth-->>Gateway: 400 Bad Request
         Gateway-->>WebApp: 400 Bad Request
         WebApp-->>Turysta: Link nieprawidłowy lub już użyty
     end
+
+    Turysta->>WebApp: Żąda ponownego wysłania linku aktywacyjnego
+    WebApp->>Gateway: POST /auth/resend-activation?email=xyz
+    Gateway->>TouristAuth: POST /auth/resend-activation?email=xyz
+
+    TouristAuth->>DB: Unieważnia wszystkie nieużyte tokeny turysty
+    TouristAuth->>TouristAuth: Generuje nowy token aktywacyjny
+    TouristAuth->>DB: Zapisuje nowy token w activation_tokens
+    TouristAuth->>EventBus: Publikuje TouristRegistered(touristId, email, activationToken)\nna topic tourist.registered
+
+    EventBus->>NotificationService: TouristRegistered
+    NotificationService->>Turysta: Nowy email aktywacyjny
